@@ -1,0 +1,134 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String?  @unique
+  phone     String?  @unique
+  name      String
+  password  String
+  avatar    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  babies    Baby[]
+  records   Record[]
+  photos    Photo[]
+  milestones Milestone[]
+  growthRecords GrowthRecord[]
+}
+
+model Baby {
+  id          String   @id @default(uuid())
+  name        String
+  birthDate   DateTime
+  gender      String?  // male / female
+  birthWeight Float?   // kg
+  birthHeight Float?   // cm
+  avatar      String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  ownerId     String
+  owner       User     @relation(fields: [ownerId], references: [id])
+
+  records     Record[]
+  photos      Photo[]
+  milestones  Milestone[]
+  growthRecords GrowthRecord[]
+}
+
+// RecordType: FEEDING, SLEEP, DIAPER, BATH, PLAY, NOTE
+// FeedingType: BREAST_MILK, FORMULA, MIXED, SOLID
+// DiaperType: WET, DIRTY, BOTH
+
+model Record {
+  id          String     @id @default(uuid())
+  type        String   // RecordType
+  startedAt   DateTime
+  endedAt     DateTime?
+  duration    Int?       // 分钟
+
+  // 喂养相关
+  feedingType String?
+  amount      Float?     // ml 或 分钟（母乳）
+  leftBreast  Boolean?   // 是否左胸
+  rightBreast Boolean?   // 是否右胸
+
+  // 便便相关
+  diaperType  String?
+  color       String?    // 颜色
+  texture     String?    // 性状
+
+  // 通用备注
+  note        String?
+
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  babyId      String
+  baby        Baby       @relation(fields: [babyId], references: [id], onDelete: Cascade)
+
+  creatorId   String
+  creator     User       @relation(fields: [creatorId], references: [id])
+}
+
+model Photo {
+  id          String   @id @default(uuid())
+  url         String
+  thumbnail   String?
+  caption     String?
+  tags        String?  // JSON array of tags ["first_bath", "smile"]
+  takenAt     DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  babyId      String
+  baby        Baby     @relation(fields: [babyId], references: [id], onDelete: Cascade)
+
+  uploaderId  String
+  uploader    User     @relation(fields: [uploaderId], references: [id])
+}
+
+// MilestoneCategory: MOTOR, FINE_MOTOR, COGNITIVE, SOCIAL, SELF_CARE
+
+model Milestone {
+  id          String   @id @default(uuid())
+  category    String
+  title       String
+  description String?
+  achievedAt  DateTime
+  photoUrl    String?
+  note        String?
+  createdAt   DateTime           @default(now())
+
+  babyId      String
+  baby        Baby               @relation(fields: [babyId], references: [id], onDelete: Cascade)
+
+  recorderId  String
+  recorder    User               @relation(fields: [recorderId], references: [id])
+}
+
+model GrowthRecord {
+  id       String   @id @default(uuid())
+  date     DateTime
+  weight   Float?   // kg
+  height   Float?   // cm
+  headCircumference Float? // cm
+  note     String?
+  createdAt DateTime @default(now())
+
+  babyId   String
+  baby     Baby     @relation(fields: [babyId], references: [id], onDelete: Cascade)
+
+  recorderId String
+  recorder   User   @relation(fields: [recorderId], references: [id])
+}
