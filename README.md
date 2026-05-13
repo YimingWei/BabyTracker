@@ -6,9 +6,7 @@
 
 ## Dashboard效果图
 
-<p align="center">
-  <img src="dashboard-cut.png" width="360" />
-</p>
+<img src="dashboard-cut.png" width="420" />
 
 ---
 
