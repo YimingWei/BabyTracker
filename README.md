@@ -4,6 +4,10 @@
 
 ---
 
+![Dashboard 界面](dashboard-cut.png)
+
+---
+
 ## 技术架构
 
 | 层级 | 技术栈 |
