@@ -6,7 +6,7 @@
 
 ## 界面效果图
 
-<img src="login-cut.png" height="360" /> <img src="register-cut.png" height="360" /> <img src="dashboard-cut.png" height="360" />
+<img src="login-cut.png" height="280" /> <img src="register-cut.png" height="280" /> <img src="dashboard-cut.png" height="280" />
 
 ---
 
