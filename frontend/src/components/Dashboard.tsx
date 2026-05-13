@@ -70,7 +70,7 @@ export default function Dashboard({ user, baby, onLogout }: { user: any; baby: a
     e.preventDefault();
     const form = e.target as HTMLFormElement;
     const fd = new FormData(form);
-    const data: any = { type: formType, creatorId: user.id, startedAt: new Date().toISOString() };
+    const data: any = { type: formType, creatorId: user.id };
 
     if (formType === 'FEEDING') {
       data.feedingType = fd.get('feedingType');
@@ -94,13 +94,23 @@ export default function Dashboard({ user, baby, onLogout }: { user: any; baby: a
     data.note = fd.get('note') as string;
 
     if (editingRecord) {
-      await api.updateRecord(baby.id, editingRecord.id, data);
-      setEditingRecord(null);
+      if (formType !== 'SLEEP') data.startedAt = editingRecord.startedAt;
     } else {
-      await api.createRecord(baby.id, data);
+      data.startedAt = new Date().toISOString();
     }
-    setShowForm(false);
-    refresh();
+
+    try {
+      if (editingRecord) {
+        await api.updateRecord(baby.id, editingRecord.id, data);
+        setEditingRecord(null);
+      } else {
+        await api.createRecord(baby.id, data);
+      }
+      setShowForm(false);
+      refresh();
+    } catch (err: any) {
+      alert('保存失败：' + (err.message || '请稍后重试'));
+    }
   };
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -129,13 +139,17 @@ export default function Dashboard({ user, baby, onLogout }: { user: any; baby: a
       headCircumference: fd.get('headCircumference') ? parseFloat(fd.get('headCircumference') as string) : null,
       recorderId: user.id,
     };
-    if (editingGrowth) {
-      await api.updateGrowth(baby.id, editingGrowth.id, data);
-      setEditingGrowth(null);
-    } else {
-      await api.createGrowth(baby.id, data);
+    try {
+      if (editingGrowth) {
+        await api.updateGrowth(baby.id, editingGrowth.id, data);
+        setEditingGrowth(null);
+      } else {
+        await api.createGrowth(baby.id, data);
+      }
+      refresh();
+    } catch (err: any) {
+      alert('保存失败：' + (err.message || '请稍后重试'));
     }
-    refresh();
   };
 
   return (

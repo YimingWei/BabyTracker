@@ -84,6 +84,7 @@ router.put('/:recordId', async (req, res) => {
     });
     res.json(record);
   } catch (err) {
+    console.error('Update record error:', err);
     res.status(500).json({ error: 'Failed to update record' });
   }
 });
