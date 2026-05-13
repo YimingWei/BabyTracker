@@ -4,7 +4,11 @@
 
 ---
 
-![Dashboard 界面](dashboard-cut.png)
+## Dashboard效果图
+
+<p align="center">
+  <img src="dashboard-cut.png" width="360" />
+</p>
 
 ---
 
