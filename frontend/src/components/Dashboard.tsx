@@ -271,7 +271,7 @@ export default function Dashboard({ user, baby, onLogout }: { user: any; baby: a
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
                     <span className="font-medium text-gray-800">{typeInfo?.label}</span>
-                    <span className="text-xs text-gray-400">{new Date(r.startedAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}</span>
+                    <span className="text-xs text-gray-400">{new Date(r.startedAt).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
                   </div>
                   <p className="text-sm text-gray-600 mt-0.5">
                     {r.type === 'FEEDING' && `${r.feedingType === 'BREAST_MILK' ? '母乳' : r.feedingType === 'FORMULA' ? '配方奶' : r.feedingType === 'MIXED' ? '混合' : '辅食'} ${r.amount ? r.amount + 'ml' : ''} ${r.duration ? r.duration + '分钟' : ''} ${r.leftBreast ? '左' : ''}${r.rightBreast ? '右' : ''}`}
