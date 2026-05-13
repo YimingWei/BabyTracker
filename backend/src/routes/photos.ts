@@ -1,11 +1,17 @@
 import { Router } from 'express';
 import multer from 'multer';
 import path from 'path';
+import fs from 'fs';
 import { randomUUID } from 'crypto';
 import prisma from '../prisma';
 
+const UPLOAD_DIR = path.join(__dirname, '../../uploads/photos');
+if (!fs.existsSync(UPLOAD_DIR)) {
+  fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+}
+
 const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, 'uploads/photos/'),
+  destination: (_req, _file, cb) => cb(null, UPLOAD_DIR),
   filename: (_req, file, cb) => {
     const ext = path.extname(file.originalname);
     cb(null, `${randomUUID()}${ext}`);

@@ -1,4 +1,6 @@
 import { Router } from 'express';
+import fs from 'fs';
+import path from 'path';
 import prisma from '../prisma';
 
 const router = Router();
@@ -45,10 +47,20 @@ router.delete('/:id', async (req, res) => {
 
 router.delete('/:id/history', async (req, res) => {
   const babyId = req.params.id;
+  const photos = await prisma.photo.findMany({ where: { babyId } });
+  for (const photo of photos) {
+    const filePath = path.join(__dirname, '../..', photo.url);
+    try {
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    } catch {
+      // ignore file deletion errors
+    }
+  }
   await prisma.$transaction([
     prisma.record.deleteMany({ where: { babyId } }),
     prisma.growthRecord.deleteMany({ where: { babyId } }),
     prisma.milestone.deleteMany({ where: { babyId } }),
+    prisma.photo.deleteMany({ where: { babyId } }),
   ]);
   res.json({ success: true });
 });

@@ -305,8 +305,11 @@ export default function Dashboard({ user, baby, onLogout }: { user: any; baby: a
           </label>
           <div className="grid grid-cols-3 gap-2">
             {photos.map(p => (
-              <div key={p.id} className="aspect-square rounded-lg overflow-hidden bg-gray-100">
+              <div key={p.id} className="aspect-square rounded-lg overflow-hidden bg-gray-100 relative">
                 <img src={`http://localhost:3001${p.url}`} alt={p.caption} className="w-full h-full object-cover" />
+                <div className="absolute bottom-0 left-0 right-0 bg-black/40 text-white text-[10px] px-1.5 py-0.5 text-center">
+                  {new Date(p.createdAt).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                </div>
               </div>
             ))}
           </div>
