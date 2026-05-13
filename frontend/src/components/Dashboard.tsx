@@ -72,6 +72,16 @@ export default function Dashboard({ user, baby, onLogout }: { user: any; baby: a
     const fd = new FormData(form);
     const data: any = { type: formType, creatorId: user.id };
 
+    // startedAt from form for all types
+    const startedAtValue = fd.get('startedAt') as string;
+    if (startedAtValue) {
+      data.startedAt = new Date(startedAtValue).toISOString();
+    } else if (editingRecord) {
+      data.startedAt = editingRecord.startedAt;
+    } else {
+      data.startedAt = new Date().toISOString();
+    }
+
     if (formType === 'FEEDING') {
       data.feedingType = fd.get('feedingType');
       data.amount = fd.get('amount') ? parseFloat(fd.get('amount') as string) : null;
@@ -79,11 +89,9 @@ export default function Dashboard({ user, baby, onLogout }: { user: any; baby: a
       data.leftBreast = fd.get('leftBreast') === 'on';
       data.rightBreast = fd.get('rightBreast') === 'on';
     } else if (formType === 'SLEEP') {
-      const started = fd.get('startedAt') as string;
       const ended = fd.get('endedAt') as string;
-      data.startedAt = new Date(started).toISOString();
       data.endedAt = ended ? new Date(ended).toISOString() : null;
-      if (started && ended) data.duration = Math.round((new Date(ended).getTime() - new Date(started).getTime()) / 60000);
+      if (startedAtValue && ended) data.duration = Math.round((new Date(ended).getTime() - new Date(startedAtValue).getTime()) / 60000);
     } else if (formType === 'DIAPER') {
       data.diaperType = fd.get('diaperType');
       data.color = fd.get('color');
@@ -92,12 +100,6 @@ export default function Dashboard({ user, baby, onLogout }: { user: any; baby: a
       data.duration = fd.get('duration') ? parseInt(fd.get('duration') as string, 10) : null;
     }
     data.note = fd.get('note') as string;
-
-    if (editingRecord) {
-      if (formType !== 'SLEEP') data.startedAt = editingRecord.startedAt;
-    } else {
-      data.startedAt = new Date().toISOString();
-    }
 
     try {
       if (editingRecord) {
@@ -396,6 +398,12 @@ export default function Dashboard({ user, baby, onLogout }: { user: any; baby: a
                   ))}
                 </select>
               </div>
+              {formType !== 'SLEEP' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">时间点</label>
+                  <input name="startedAt" type="datetime-local" className="input" defaultValue={editingRecord ? toDatetimeLocal(editingRecord.startedAt) : new Date().toISOString().slice(0, 16)} />
+                </div>
+              )}
               {formType === 'FEEDING' && (
                 <>
                   <div>
