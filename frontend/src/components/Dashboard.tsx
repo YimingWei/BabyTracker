@@ -10,6 +10,16 @@ const RECORD_TYPES = [
   { key: 'NOTE', label: '备注', icon: '📝', color: 'bg-gray-100 text-gray-700' },
 ];
 
+function toDatetimeLocal(iso: string) {
+  const d = new Date(iso);
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+  return d.toISOString().slice(0, 16);
+}
+
+function toDateInput(iso: string) {
+  return new Date(iso).toISOString().split('T')[0];
+}
+
 export default function Dashboard({ user, baby, onLogout }: { user: any; baby: any; onLogout?: () => void }) {
   const [records, setRecords] = useState<any[]>([]);
   const [stats, setStats] = useState<any>({ feedingCount: 0, totalSleepMinutes: 0, diaperCount: 0, lastFeeding: null });
@@ -20,6 +30,8 @@ export default function Dashboard({ user, baby, onLogout }: { user: any; baby: a
   const [formType, setFormType] = useState('FEEDING');
   const [feedingSubType, setFeedingSubType] = useState('BREAST_MILK');
   const [refreshKey, setRefreshKey] = useState(0);
+  const [editingRecord, setEditingRecord] = useState<any>(null);
+  const [editingGrowth, setEditingGrowth] = useState<any>(null);
 
   const refresh = useCallback(() => setRefreshKey(k => k + 1), []);
 
@@ -32,7 +44,29 @@ export default function Dashboard({ user, baby, onLogout }: { user: any; baby: a
 
   const ageDays = Math.floor((Date.now() - new Date(baby.birthDate).getTime()) / (1000 * 60 * 60 * 24));
 
-  const handleAddRecord = async (e: React.FormEvent) => {
+  const handleClearHistory = async () => {
+    if (!window.confirm('确定要清空所有历史记录吗？此操作不可恢复！')) return;
+    try {
+      await api.clearHistory(baby.id);
+      refresh();
+    } catch {
+      alert('清空失败');
+    }
+  };
+
+  const openEditRecord = (record: any) => {
+    setEditingRecord(record);
+    setFormType(record.type);
+    if (record.type === 'FEEDING') setFeedingSubType(record.feedingType || 'BREAST_MILK');
+    setShowForm(true);
+  };
+
+  const closeForm = () => {
+    setShowForm(false);
+    setEditingRecord(null);
+  };
+
+  const handleRecordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const form = e.target as HTMLFormElement;
     const fd = new FormData(form);
@@ -59,7 +93,12 @@ export default function Dashboard({ user, baby, onLogout }: { user: any; baby: a
     }
     data.note = fd.get('note') as string;
 
-    await api.createRecord(baby.id, data);
+    if (editingRecord) {
+      await api.updateRecord(baby.id, editingRecord.id, data);
+      setEditingRecord(null);
+    } else {
+      await api.createRecord(baby.id, data);
+    }
     setShowForm(false);
     refresh();
   };
@@ -76,21 +115,26 @@ export default function Dashboard({ user, baby, onLogout }: { user: any; baby: a
     } catch (err) {
       alert('上传失败，请重试');
     }
-    // reset input so the same file can be selected again
     e.target.value = '';
   };
 
-  const handleAddGrowth = async (e: React.FormEvent) => {
+  const handleGrowthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const form = e.target as HTMLFormElement;
     const fd = new FormData(form);
-    await api.createGrowth(baby.id, {
+    const data = {
       date: fd.get('date'),
       weight: fd.get('weight') ? parseFloat(fd.get('weight') as string) : null,
       height: fd.get('height') ? parseFloat(fd.get('height') as string) : null,
       headCircumference: fd.get('headCircumference') ? parseFloat(fd.get('headCircumference') as string) : null,
       recorderId: user.id,
-    });
+    };
+    if (editingGrowth) {
+      await api.updateGrowth(baby.id, editingGrowth.id, data);
+      setEditingGrowth(null);
+    } else {
+      await api.createGrowth(baby.id, data);
+    }
     refresh();
   };
 
@@ -112,6 +156,7 @@ export default function Dashboard({ user, baby, onLogout }: { user: any; baby: a
             {onLogout && (
               <button onClick={onLogout} className="text-xs text-red-400 hover:text-red-600">退出</button>
             )}
+            <button onClick={handleClearHistory} className="text-xs text-gray-400 hover:text-gray-600">清空历史</button>
           </div>
         </div>
       </div>
@@ -149,27 +194,27 @@ export default function Dashboard({ user, baby, onLogout }: { user: any; baby: a
       {/* Quick Actions */}
       <div className="max-w-xl mx-auto px-4 mt-4">
         <div className="grid grid-cols-3 gap-2">
-          <button onClick={() => { setFormType('FEEDING'); setFeedingSubType('BREAST_MILK'); setShowForm(true); }} className="card py-3 flex flex-col items-center gap-1 hover:shadow-md transition">
+          <button onClick={() => { setFormType('FEEDING'); setFeedingSubType('BREAST_MILK'); setEditingRecord(null); setShowForm(true); }} className="card py-3 flex flex-col items-center gap-1 hover:shadow-md transition">
             <span className="text-2xl">🍼</span>
             <span className="text-xs font-medium">喂奶</span>
           </button>
-          <button onClick={() => { setFormType('SLEEP'); setShowForm(true); }} className="card py-3 flex flex-col items-center gap-1 hover:shadow-md transition">
+          <button onClick={() => { setFormType('SLEEP'); setEditingRecord(null); setShowForm(true); }} className="card py-3 flex flex-col items-center gap-1 hover:shadow-md transition">
             <span className="text-2xl">😴</span>
             <span className="text-xs font-medium">睡眠</span>
           </button>
-          <button onClick={() => { setFormType('DIAPER'); setShowForm(true); }} className="card py-3 flex flex-col items-center gap-1 hover:shadow-md transition">
+          <button onClick={() => { setFormType('DIAPER'); setEditingRecord(null); setShowForm(true); }} className="card py-3 flex flex-col items-center gap-1 hover:shadow-md transition">
             <span className="text-2xl">💩</span>
             <span className="text-xs font-medium">便便</span>
           </button>
-          <button onClick={() => { setFormType('BATH'); setShowForm(true); }} className="card py-3 flex flex-col items-center gap-1 hover:shadow-md transition">
+          <button onClick={() => { setFormType('BATH'); setEditingRecord(null); setShowForm(true); }} className="card py-3 flex flex-col items-center gap-1 hover:shadow-md transition">
             <span className="text-2xl">🛁</span>
             <span className="text-xs font-medium">洗澡</span>
           </button>
-          <button onClick={() => { setFormType('PLAY'); setShowForm(true); }} className="card py-3 flex flex-col items-center gap-1 hover:shadow-md transition">
+          <button onClick={() => { setFormType('PLAY'); setEditingRecord(null); setShowForm(true); }} className="card py-3 flex flex-col items-center gap-1 hover:shadow-md transition">
             <span className="text-2xl">🧸</span>
             <span className="text-xs font-medium">玩耍</span>
           </button>
-          <button onClick={() => { setFormType('NOTE'); setShowForm(true); }} className="card py-3 flex flex-col items-center gap-1 hover:shadow-md transition">
+          <button onClick={() => { setFormType('NOTE'); setEditingRecord(null); setShowForm(true); }} className="card py-3 flex flex-col items-center gap-1 hover:shadow-md transition">
             <span className="text-2xl">📝</span>
             <span className="text-xs font-medium">备注</span>
           </button>
@@ -203,7 +248,7 @@ export default function Dashboard({ user, baby, onLogout }: { user: any; baby: a
           {records.map(r => {
             const typeInfo = RECORD_TYPES.find(t => t.key === r.type);
             return (
-              <div key={r.id} className="card flex items-start gap-3">
+              <div key={r.id} onClick={() => openEditRecord(r)} className="card flex items-start gap-3 cursor-pointer hover:shadow-md transition">
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg shrink-0 ${typeInfo?.color || ''}`}>
                   {typeInfo?.icon}
                 </div>
@@ -263,27 +308,32 @@ export default function Dashboard({ user, baby, onLogout }: { user: any; baby: a
       {/* Growth Tab */}
       {tab === 'growth' && (
         <div className="max-w-xl mx-auto px-4 mt-4 space-y-4">
-          <form onSubmit={handleAddGrowth} className="card space-y-3">
-            <h3 className="font-medium text-gray-800">添加生长记录</h3>
+          <form key={editingGrowth?.id || 'new-growth'} onSubmit={handleGrowthSubmit} className="card space-y-3">
+            <h3 className="font-medium text-gray-800">{editingGrowth ? '编辑生长记录' : '添加生长记录'}</h3>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               <div>
                 <label className="text-xs text-gray-500">日期</label>
-                <input name="date" type="date" className="input text-sm" defaultValue={new Date().toISOString().split('T')[0]} required />
+                <input name="date" type="date" className="input text-sm" defaultValue={editingGrowth ? toDateInput(editingGrowth.date) : new Date().toISOString().split('T')[0]} required />
               </div>
               <div>
                 <label className="text-xs text-gray-500">体重(kg)</label>
-                <input name="weight" type="number" step="0.01" className="input text-sm" placeholder="3.5" />
+                <input name="weight" type="number" step="0.01" className="input text-sm" placeholder="3.5" defaultValue={editingGrowth?.weight ?? ''} />
               </div>
               <div>
                 <label className="text-xs text-gray-500">身高(cm)</label>
-                <input name="height" type="number" step="0.1" className="input text-sm" placeholder="52" />
+                <input name="height" type="number" step="0.1" className="input text-sm" placeholder="52" defaultValue={editingGrowth?.height ?? ''} />
               </div>
               <div>
                 <label className="text-xs text-gray-500">头围(cm)</label>
-                <input name="headCircumference" type="number" step="0.1" className="input text-sm" placeholder="35" />
+                <input name="headCircumference" type="number" step="0.1" className="input text-sm" placeholder="35" defaultValue={editingGrowth?.headCircumference ?? ''} />
               </div>
             </div>
-            <button type="submit" className="btn-primary w-full text-sm">保存</button>
+            <div className="flex gap-2">
+              <button type="submit" className="btn-primary flex-1 text-sm">{editingGrowth ? '保存修改' : '保存'}</button>
+              {editingGrowth && (
+                <button type="button" onClick={() => setEditingGrowth(null)} className="px-4 py-2 bg-gray-100 text-gray-600 rounded-lg text-sm">取消</button>
+              )}
+            </div>
           </form>
 
           {growth.length > 0 && (
@@ -291,7 +341,7 @@ export default function Dashboard({ user, baby, onLogout }: { user: any; baby: a
               <h3 className="font-medium text-gray-800 mb-3">生长记录</h3>
               <div className="space-y-2">
                 {growth.map(g => (
-                  <div key={g.id} className="flex justify-between text-sm py-2 border-b last:border-0">
+                  <div key={g.id} onClick={() => setEditingGrowth(g)} className="flex justify-between text-sm py-2 border-b last:border-0 cursor-pointer hover:bg-gray-50 rounded px-2 -mx-2 transition">
                     <span className="text-gray-500">{new Date(g.date).toLocaleDateString('zh-CN')}</span>
                     <span className="text-gray-800">
                       {g.weight && `体重 ${g.weight}kg`}
@@ -312,11 +362,11 @@ export default function Dashboard({ user, baby, onLogout }: { user: any; baby: a
           <div className="bg-white rounded-xl w-full max-w-md max-h-[80vh] overflow-y-auto">
             <div className="p-4 border-b flex items-center justify-between">
               <h2 className="font-bold text-gray-800">
-                {RECORD_TYPES.find(t => t.key === formType)?.icon} 添加{RECORD_TYPES.find(t => t.key === formType)?.label}记录
+                {RECORD_TYPES.find(t => t.key === formType)?.icon} {editingRecord ? '编辑' : '添加'}{RECORD_TYPES.find(t => t.key === formType)?.label}记录
               </h2>
-              <button onClick={() => setShowForm(false)} className="text-gray-400 text-xl">&times;</button>
+              <button onClick={closeForm} className="text-gray-400 text-xl">&times;</button>
             </div>
-            <form onSubmit={handleAddRecord} className="p-4 space-y-4">
+            <form key={editingRecord?.id || 'new-record'} onSubmit={handleRecordSubmit} className="p-4 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">记录类型</label>
                 <select
@@ -347,17 +397,17 @@ export default function Dashboard({ user, baby, onLogout }: { user: any; baby: a
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">奶量 (ml)</label>
-                      <input name="amount" type="number" step="0.1" className="input" placeholder="例如：120" />
+                      <input name="amount" type="number" step="0.1" className="input" placeholder="例如：120" defaultValue={editingRecord?.amount ?? ''} />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">时长 (分钟)</label>
-                      <input name="feedingDuration" type="number" step="1" className="input" placeholder="例如：20" />
+                      <input name="feedingDuration" type="number" step="1" className="input" placeholder="例如：20" defaultValue={editingRecord?.duration ?? ''} />
                     </div>
                   </div>
                   {feedingSubType !== 'FORMULA' && (
                     <div className="flex gap-4">
-                      <label className="flex items-center gap-2"><input type="checkbox" name="leftBreast" className="w-4 h-4" /> 左胸</label>
-                      <label className="flex items-center gap-2"><input type="checkbox" name="rightBreast" className="w-4 h-4" /> 右胸</label>
+                      <label className="flex items-center gap-2"><input type="checkbox" name="leftBreast" className="w-4 h-4" defaultChecked={editingRecord?.leftBreast || false} /> 左胸</label>
+                      <label className="flex items-center gap-2"><input type="checkbox" name="rightBreast" className="w-4 h-4" defaultChecked={editingRecord?.rightBreast || false} /> 右胸</label>
                     </div>
                   )}
                 </>
@@ -366,11 +416,11 @@ export default function Dashboard({ user, baby, onLogout }: { user: any; baby: a
                 <>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">开始时间</label>
-                    <input name="startedAt" type="datetime-local" className="input" defaultValue={new Date().toISOString().slice(0, 16)} required />
+                    <input name="startedAt" type="datetime-local" className="input" defaultValue={editingRecord ? toDatetimeLocal(editingRecord.startedAt) : new Date().toISOString().slice(0, 16)} required />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">结束时间</label>
-                    <input name="endedAt" type="datetime-local" className="input" />
+                    <input name="endedAt" type="datetime-local" className="input" defaultValue={editingRecord?.endedAt ? toDatetimeLocal(editingRecord.endedAt) : ''} />
                   </div>
                 </>
               )}
@@ -378,7 +428,7 @@ export default function Dashboard({ user, baby, onLogout }: { user: any; baby: a
                 <>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">类型</label>
-                    <select name="diaperType" className="input" defaultValue="WET">
+                    <select name="diaperType" className="input" defaultValue={editingRecord?.diaperType || 'WET'}>
                       <option value="WET">尿尿</option>
                       <option value="DIRTY">便便</option>
                       <option value="BOTH">都有</option>
@@ -386,25 +436,25 @@ export default function Dashboard({ user, baby, onLogout }: { user: any; baby: a
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">颜色</label>
-                    <input name="color" type="text" className="input" placeholder="例如：黄色" />
+                    <input name="color" type="text" className="input" placeholder="例如：黄色" defaultValue={editingRecord?.color || ''} />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">性状</label>
-                    <input name="texture" type="text" className="input" placeholder="例如：稀糊状" />
+                    <input name="texture" type="text" className="input" placeholder="例如：稀糊状" defaultValue={editingRecord?.texture || ''} />
                   </div>
                 </>
               )}
               {formType === 'PLAY' && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">时长 (分钟)</label>
-                  <input name="duration" type="number" step="1" className="input" placeholder="例如：30" />
+                  <input name="duration" type="number" step="1" className="input" placeholder="例如：30" defaultValue={editingRecord?.duration ?? ''} />
                 </div>
               )}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">备注</label>
-                <textarea name="note" className="input" rows={2} placeholder="可选..." />
+                <textarea name="note" className="input" rows={2} placeholder="可选..." defaultValue={editingRecord?.note || ''} />
               </div>
-              <button type="submit" className="btn-primary w-full">保存记录</button>
+              <button type="submit" className="btn-primary w-full">{editingRecord ? '保存修改' : '保存记录'}</button>
             </form>
           </div>
         </div>

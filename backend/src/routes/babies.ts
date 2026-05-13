@@ -43,4 +43,14 @@ router.delete('/:id', async (req, res) => {
   res.json({ success: true });
 });
 
+router.delete('/:id/history', async (req, res) => {
+  const babyId = req.params.id;
+  await prisma.$transaction([
+    prisma.record.deleteMany({ where: { babyId } }),
+    prisma.growthRecord.deleteMany({ where: { babyId } }),
+    prisma.milestone.deleteMany({ where: { babyId } }),
+  ]);
+  res.json({ success: true });
+});
+
 export default router;

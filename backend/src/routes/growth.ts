@@ -47,6 +47,25 @@ router.get('/curve', async (req, res) => {
   res.json(curveData);
 });
 
+router.put('/:recordId', async (req, res) => {
+  const { date, weight, height, headCircumference, note } = req.body;
+  try {
+    const record = await prisma.growthRecord.update({
+      where: { id: req.params.recordId },
+      data: {
+        date: date ? new Date(date) : undefined,
+        weight,
+        height,
+        headCircumference,
+        note,
+      },
+    });
+    res.json(record);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update growth record' });
+  }
+});
+
 router.delete('/:recordId', async (req, res) => {
   await prisma.growthRecord.delete({ where: { id: req.params.recordId } });
   res.json({ success: true });

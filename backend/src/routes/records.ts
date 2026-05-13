@@ -62,6 +62,32 @@ router.get('/stats/today', async (req, res) => {
   res.json(stats);
 });
 
+router.put('/:recordId', async (req, res) => {
+  const { type, startedAt, endedAt, duration, feedingType, amount, leftBreast, rightBreast, diaperType, color, texture, note } = req.body;
+  try {
+    const record = await prisma.record.update({
+      where: { id: req.params.recordId },
+      data: {
+        type,
+        startedAt: startedAt ? new Date(startedAt) : undefined,
+        endedAt: endedAt ? new Date(endedAt) : null,
+        duration,
+        feedingType,
+        amount,
+        leftBreast,
+        rightBreast,
+        diaperType,
+        color,
+        texture,
+        note,
+      },
+    });
+    res.json(record);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update record' });
+  }
+});
+
 router.delete('/:recordId', async (req, res) => {
   await prisma.record.delete({ where: { id: req.params.recordId } });
   res.json({ success: true });
