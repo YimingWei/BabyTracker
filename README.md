@@ -4,9 +4,9 @@
 
 ---
 
-## Dashboard效果图
+## 界面效果图
 
-<img src="dashboard-cut.png" width="420" />
+<img src="login-cut.png" height="360" /> <img src="register-cut.png" height="360" /> <img src="dashboard-cut.png" height="360" />
 
 ---
 
